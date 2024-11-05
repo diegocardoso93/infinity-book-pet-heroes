@@ -16,3 +16,5 @@ export default {
 
   extends: vikeVue as typeof vikeVue,
 } satisfies Config;
+
+export const IPFS_NODE = 'https://ipfs-pin.numbersprotocol.io/ipfs';

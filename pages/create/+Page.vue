@@ -37,6 +37,7 @@
 <script lang="ts" setup>
 import { useData } from 'vike-vue/useData';
 import { Data } from './+data';
+import { IPFS_NODE } from '../+config';
 import { ref } from 'vue';
 import PageHeader from '../../components/PageHeader.vue';
 import ModalLoginCapture from '../../components/ModalLoginCapture.vue';
@@ -49,15 +50,13 @@ const loading2 = ref();
 const showLogin = ref();
 const message = ref();
 
-const BASE_NODE = 'https://ipfs-pin.numbersprotocol.io/ipfs/';
-
 const { heroes } = useData<Data>();
 console.log(heroes);
 
 function showHero(event) {
   const selected = event?.target.value;
   console.log(selected);
-  selectedHeroImg.value = `${BASE_NODE}/${heroes[selected].cardNid}`;
+  selectedHeroImg.value = `${IPFS_NODE}/${heroes[selected].cardNid}`;
 }
 
 async function verifyCaptureToken(token: string) {

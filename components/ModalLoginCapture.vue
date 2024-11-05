@@ -4,21 +4,19 @@
       <div class="close" @click="close()">&times;</div>
       <div class="item">
         <div>
-          <div class="bubble-element Group cmaUaIaQ bubble-r-container flex row" style="overflow: visible; justify-content: flex-start; border-radius: 0px; opacity: 1; align-self: center; min-width: 160px; max-width: 160px; order: 1; min-height: 35px; max-height: 35px; width: 160px; flex-grow: 1; height: max-content; margin: 10px 10px 10px 0px; z-index: 8; background-color: rgba(255, 255, 255, 0); background-repeat: no-repeat; background-position: center center; background-size: cover; background-image: url(&quot;https://ff520f7e780dd0eafa95355f6c465eb0.cdn.bubble.io/f1684836661176x661161624568722400/Capture%20White%20App%20Wordmark.svg&quot;);"></div>
+          <div class="logo-capture"></div>
         </div>
         <form name="capture-login-form" @submit.prevent="getCaptureToken()">
           <input id="email" type="email" placeholder="email" />
           <input id="password" type="password" placeholder="password">
           <button type="submit" :disabled="loading">
-            <div v-if="loading" class="loadingContainer">
-              <div class="loadingIcon">◌</div>
+            <div v-if="loading" class="loading-container">
+              <div class="loading-ccon">◌</div>
             </div>
             <template v-else>Login</template>
           </button>
         </form>
-        <div class="message">
-          {{ message }}
-        </div>
+        <div class="message">{{ message }}</div>
       </div>
     </div>
   </div>
@@ -126,7 +124,7 @@ button {
 }
 
 
-.loadingContainer {
+.loading-container {
   width: 100%;
   height: 18px;
   display: flex;
@@ -140,7 +138,7 @@ button {
   }
 }
 
-.loadingIcon {
+.loading-icon {
   font-size: 40px;
   animation: spinner 0.8s linear infinite;
 }
@@ -149,5 +147,28 @@ form {
   width: 300px;
   display: flex;
   flex-direction: column;
+}
+
+.logo-capture {
+  overflow: visible;
+  justify-content: flex-start;
+  border-radius: 0px;
+  opacity: 1;
+  align-self: center;
+  min-width: 160px;
+  max-width: 160px;
+  order: 1;
+  min-height: 35px;
+  max-height: 35px;
+  width: 160px;
+  flex-grow: 1;
+  height: max-content;
+  margin: 10px 10px 10px 0px;
+  z-index: 8;
+  background-color: rgba(255, 255, 255, 0);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  background-image: url(&quot;https://ff520f7e780dd0eafa95355f6c465eb0.cdn.bubble.io/f1684836661176x661161624568722400/Capture%20White%20App%20Wordmark.svg&quot;);
 }
 </style>
