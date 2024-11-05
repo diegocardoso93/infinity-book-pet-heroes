@@ -2,12 +2,21 @@ import type { UniversalHandler } from "@universal-middleware/core";
 import fetch from 'node-fetch';
 import { FormData } from 'formdata-node';
 import OpenAI from "openai";
-import { Hero, Heroes } from "./heroes";
+import {
+  buildOpenAIClient,
+  delay,
+  Hero,
+  Heroes,
+  CreateChapterRequestInput,
+  UploadToCaptureInputParams,
+  UploadToCaptureRequestInput,
+  UploadToCaptureResult
+} from "../common";
 
-export const createChapterHandler = (async (request, context, runtime): Promise<Response> => {
+export const createChapterHandler = (async (request, context, runtime: any): Promise<Response> => {
   console.log('createChapterHandler');
   const env = runtime.env;
-  const DB = env.DB;
+  const DB: KVNamespace = env.DB;
 
   if (await DB.get('_LOCKED')) {
     return new Response(JSON.stringify({ locked: true }), {
@@ -15,15 +24,14 @@ export const createChapterHandler = (async (request, context, runtime): Promise<
       headers: {"content-type": "application/json"},
     });
   }
-  await DB.put('_LOCKED', 1);
+  await DB.put('_LOCKED', '1');
 
-  const {hero, chapter} = await request.json();
+  const {hero, chapter} = await request.json() as CreateChapterRequestInput;
   const openaiClient = buildOpenAIClient(env);
   const selectedHero = Heroes[hero];
 
   const story = await generateStory(openaiClient, selectedHero, chapter);
-
-  let basek = await DB.get('_LAST') || 0;
+  let basek = +(await DB.get('_LAST') || '0');
   try {
     for (const twoParagraphs of story) {
       const textToImageParagraph1 = await getParagraphToGenerateImage(openaiClient, twoParagraphs.text[0]);
@@ -45,13 +53,13 @@ export const createChapterHandler = (async (request, context, runtime): Promise<
         status: 0,
         backgroundImage
       };
-      await DB.put(basek, JSON.stringify(pageData));
+      await DB.put(`${basek}`, JSON.stringify(pageData));
     }
 
-    await DB.put('_LAST', basek);
+    await DB.put('_LAST', `${basek}`);
   } finally {
-    await DB.delete('_LOCKED', 0);
-    for (let x=basek;x>basek-3;x--) {
+    await DB.delete('_LOCKED');
+    for (let x = basek; x>basek-3; x--) {
       await DB.delete(`_TEMP_IMG1${x}`);
       await DB.delete(`_TEMP_IMG2${x}`);
     }
@@ -65,26 +73,22 @@ export const createChapterHandler = (async (request, context, runtime): Promise<
   });
 }) satisfies UniversalHandler;
 
-
-export const uploadToCaptureHandler = (async (request, context, runtime): Promise<Response> => {
+export const uploadToCaptureHandler = (async (request, context, runtime: any): Promise<Response> => {
   console.log('uploadToCaptureHandler');
   const env = runtime.env;
-  const DB = env.DB;
+  const DB: KVNamespace = env.DB;
 
-  const { key, token } = await request.json();
-  let error = false, message = 'success';
-  for (let basek=key-2; basek<=key; basek++) {
-    const pageData = JSON.parse(await DB.get(basek));
-    // console.log(basek, pageData);
-
+  const { key, token } = await request.json() as UploadToCaptureRequestInput;
+  let uploadResult: UploadToCaptureResult = {};
+  for (let basek = +key-2; basek <= +key; basek++) {
+    const pageData = JSON.parse(await DB.get(`${basek}`) || '{}');
     if (!pageData.status) {
       const response = await fetch(
         `${env.HTML_TO_IMG_RENDER_SERVICE}?width=1076&height=564&deviceScaleFactor=1&type=png&url=${env.SITE_BASE_URL}/render?key=${basek}`
       );
       const binaryImage = await response.arrayBuffer();
-      // console.log(binaryImage);
   
-      const uploadResult = await uploadFile(env, token, {
+      uploadResult = await uploadFile(token, {
         chapter: pageData.chapter,
         hero: pageData.hero,
         pages: pageData.pages,
@@ -93,20 +97,18 @@ export const uploadToCaptureHandler = (async (request, context, runtime): Promis
       });
 
       console.log(uploadResult);
-      if (!uploadResult.id) {
-        error = true;
-        message = uploadResult;
+      if (uploadResult.error) {
         break;
       }
 
       pageData.captureId = uploadResult.id;
       pageData.status = 1;
-      await DB.put(basek, JSON.stringify(pageData));
+      await DB.put(`${basek}`, JSON.stringify(pageData));
     }
   }
 
-  return new Response(JSON.stringify({ message }), {
-    status: error ? 500 : 200,
+  return new Response(JSON.stringify(uploadResult), {
+    status: uploadResult.error ? 500 : 200,
     headers: {
       "content-type": "application/json",
     },
@@ -114,7 +116,7 @@ export const uploadToCaptureHandler = (async (request, context, runtime): Promis
 }) satisfies UniversalHandler;
 
 
-async function mergeBase64Images(env, basek: string) {
+async function mergeBase64Images(env: Env, basek: number) {
   const response = await fetch(
     `${env.HTML_TO_IMG_RENDER_SERVICE}?width=1024&height=512&deviceScaleFactor=1&type=png&url=${env.SITE_BASE_URL}/render-merge-images?basek=${basek}`
   );
@@ -123,13 +125,11 @@ async function mergeBase64Images(env, basek: string) {
   return buf.toString('base64');
 }
 
-
-async function generateImage(env, input: string) {
+async function generateImage(env: Env, input: string) {
   const response = await fetch(`${env.IMG_GENERATE_SERVICE}?q=${input.replaceAll('“', '"').replaceAll('”', '"')}`);
   const base64pngString = await response.text();
   return base64pngString;
 }
-
 
 async function generateStory(openaiClient: OpenAI, hero: Hero, chapter: string) {
   const message = `generate a small chapter of story (6 paragraphs) of a ${hero.kind} super hero "${hero.name}".
@@ -194,26 +194,21 @@ and keeping only the other characters and the setting description:
   return text || '';
 }
 
-
-async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
+async function uploadFile(token: string, input: UploadToCaptureInputParams): Promise<UploadToCaptureResult> {
   const formData = new FormData();
-  // console.log(input.binaryImage);
-  // console.log(Buffer.from(input.binaryImage));
   formData.append('asset_file', new Blob([Buffer.from(input.binaryImage)], { type: 'image/png' }), 'image.png');
 
   formData.append('meta', JSON.stringify({
     proof: {
       hash: '',
-      mimeType: '',
+      mimeType: 'image/png',
       timestamp: ''
     },
-    information: [
-      {
-        provider: 'Capture API',
-        name: 'version',
-        value: 'v3'
-      }
-    ]
+    information: [{
+      provider: 'Capture API',
+      name: 'version',
+      value: 'v3'
+    }]
   }));
 
   formData.append('caption', `Infinity Book: Pet Heroes - ${input.hero.name} | ${input.chapter}`);
@@ -252,40 +247,31 @@ async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
     }
   }));
   console.log(formData);
+
   const response = await fetch('https://api.numbersprotocol.io/api/v3/assets/', {
     method: 'POST',
     headers: {
       'Authorization': `token ${token}`,
     },
-    body: formData,
+    body: formData as any,
   });
 
-  let data 
   if (response.status == 201) {
-    data = await response.json();
-  } else {
-    data = await response.text();
+    const jsonResponse = await response.json() as {id: string};
+    return {
+      id: jsonResponse.id,
+      message: 'Success',
+      error: false,
+    };
   }
-  console.log(data);
-  return data;
+
+  return {
+    message: await response.text(),
+    error: true,
+  };
 }
 
-export const keyHandler = (async (request, context, runtime): Promise<Response> => {
-  console.log('keyHandler');
-  const DB = runtime.env.DB;
-  const key = request.url.replace(/.*\?key=/, '');
-  const keyData = JSON.parse(await DB.get(key));
-
-  return new Response(JSON.stringify(keyData), {
-    status: 200,
-    headers: {
-      "content-type": "application/json",
-    },
-  });
-}) satisfies UniversalHandler;
-
-
-export const renderMergeImagesHandler = (async (request, context, runtime): Promise<Response> => {
+export const renderMergeImagesHandler = (async (request, context, runtime: any): Promise<Response> => {
   console.log('renderMergeImagesHandler');
   const DB = runtime.env.DB;
   const basek = request.url.replace(/.*\?basek=/, '');
@@ -306,14 +292,16 @@ export const renderMergeImagesHandler = (async (request, context, runtime): Prom
 }) satisfies UniversalHandler;
 
 
-function buildOpenAIClient(env) {
-  return new OpenAI({
-    organization: env.OPENAI_ORGANIZATION,
-    project: env.OPENAI_PROJECT,
-    apiKey: env.OPENAI_APIKEY,
-  });
-}
+export const keyHandler = (async (request, context, runtime: any): Promise<Response> => {
+  console.log('keyHandler');
+  const DB = runtime.env.DB;
+  const key = request.url.replace(/.*\?key=/, '');
+  const keyData = JSON.parse(await DB.get(key));
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  return new Response(JSON.stringify(keyData), {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}) satisfies UniversalHandler;

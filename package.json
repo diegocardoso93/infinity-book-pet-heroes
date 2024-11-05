@@ -3,7 +3,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite build && wrangler pages dev",
-    "deploy": "vite build && wrangler pages deploy"
+    "deploy": "vite build && wrangler pages deploy",
+    "type-check": "wrangler types --experimental-include-runtime && tsc"
   },
   "dependencies": {
     "@gradio/client": "^1.7.0",
@@ -24,8 +25,8 @@
     "vue": "^3.5.12"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241018.0",
     "@eslint/js": "^9.13.0",
+    "@types/node": "^20.8.3",
     "@types/uniqid": "^5.3.4",
     "@universal-middleware/core": "^0.2.13",
     "eslint": "^9.13.0",
