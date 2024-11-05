@@ -4,7 +4,7 @@
 
 **Infinity Book: Pet Heroes** is a community-driven digital book application where users can collaboratively create stories centered around their favorite pet heroes. Each user can contribute by writing a new chapter, selecting a pet, and assigning a mission to their chosen hero. 
 
-Utilizing the Capture SDK by Numbers Protocol, we ensure that every chapter is verified for trust and authenticity, generating unique assets for each creator. With AI-generated text and images, this platform offers a distinctive storytelling experience, inviting users to both explore and contribute to a shared narrative.
+Utilizing the Capture by Numbers Protocol, we ensure that every chapter is verified for trust and authenticity, generating unique assets for each creator. With AI-generated text and images, this platform offers a distinctive storytelling experience, inviting users to both explore and contribute to a shared narrative.
 
 ## Join the Adventure!
 
