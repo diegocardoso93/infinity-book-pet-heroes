@@ -1,6 +1,6 @@
 import type { UniversalHandler } from "@universal-middleware/core";
 import fetch from 'node-fetch';
-import FormData from 'form-data';
+import { FormData } from 'formdata-node';
 import OpenAI from "openai";
 import { Hero, Heroes } from "./heroes";
 
@@ -197,8 +197,9 @@ and keeping only the other characters and the setting description:
 
 async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
   const formData = new FormData();
-
-  formData.append('asset_file', Buffer.from(input.binaryImage), { filename: 'image.png', contentType: 'image/png' });
+  // console.log(input.binaryImage);
+  // console.log(Buffer.from(input.binaryImage));
+  formData.append('asset_file', new Blob([Buffer.from(input.binaryImage)], { type: 'image/png' }), 'image.png');
 
   formData.append('meta', JSON.stringify({
     proof: {
@@ -215,7 +216,7 @@ async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
     ]
   }));
 
-  formData.append('caption', 'Infinity Book - Pet Heroes');
+  formData.append('caption', `Infinity Book: Pet Heroes - ${input.hero.name} | ${input.chapter}`);
   formData.append('headline', `${input.hero.name} | ${input.chapter}`);
   formData.append('nit_commit_custom', JSON.stringify({
     captureEyeCustom: [
@@ -250,7 +251,7 @@ async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
       url: `https://infinity-book-pet-heroes.pages.dev/read?key=${input.key}`
     }
   }));
-
+  console.log(formData);
   const response = await fetch('https://api.numbersprotocol.io/api/v3/assets/', {
     method: 'POST',
     headers: {
@@ -260,7 +261,7 @@ async function uploadFile(env, token = 'YOUR_CAPTURE_TOKEN', input) {
   });
 
   let data 
-  if (response.status == 200) {
+  if (response.status == 201) {
     data = await response.json();
   } else {
     data = await response.text();

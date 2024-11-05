@@ -2,10 +2,13 @@
   <PageHeader />
 
   <div class="container">
-    <div v-if="!captureId" class="end">
-      That's all folks, for now. <br />
-      Perhaps you'll contribute with the next chapter?
-    </div>
+    <template v-if="!captureId">
+      <Page v-if="status === 0" />
+      <div v-else class="end">
+        That's all folks, for now. <br />
+        Perhaps you'll contribute with the next chapter?
+      </div>
+    </template>
     <capture-eye v-else :nid="captureId">
       <media-viewer :src="`https://ipfs-pin.numbersprotocol.io/ipfs/${captureId}`" />
     </capture-eye>
@@ -22,8 +25,9 @@
 import { useData } from 'vike-vue/useData';
 import { Data } from './+data';
 import PageHeader from '../../components/PageHeader.vue';
+import Page from '../render/+Page.vue';
 
-const { captureId } = useData<Data>();
+const { captureId, status } = useData<Data>();
 const currentKey = +new URLSearchParams(location.search).get('key')!;
 
 function goToPage(num: number) {
